@@ -62,6 +62,8 @@ chart.properties(
     title='TSA checkpoint travel numbers'
 )
 
+chart
+
 df_2022 = pd.read_excel('US-Outbound-to-World-Regions_2022.xlsx')
 df_2022.columns = df_2022.iloc[2]
 df_2022_select = df_2022.iloc[3:10].set_index('Regions')
