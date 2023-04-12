@@ -58,7 +58,7 @@ chart = alt.layer(line, points, text, vline)
 
 # 显示图表
 chart.properties(
-    width=800, 
+    width=2000, 
     title='TSA checkpoint travel numbers'
 )
 
