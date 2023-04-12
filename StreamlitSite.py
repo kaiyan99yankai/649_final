@@ -12,6 +12,157 @@ st.header('Introduction')
 st.text("This is a tool for you, the travel agents and group travel planners, to compare travelers' needs and behaviors before, during and after the COVID pandemic")
 
 st.header('Plane Travels')
+tsa_df = pd.read_excel('tsa.xlsx')
+tsa_df_date = tsa_df.set_index('Date')
+tsa_df_year = tsa_df_date.stack().reset_index().rename(columns={'level_1':'year'})
+tsa_df_stack = tsa_df_year.join(tsa_df_date)
+tsa_df_stack = tsa_df_stack[['Date', 'year', 0]]
+tsa_df_stack = tsa_df_stack.rename(columns={0:'data'})
+
+line = alt.Chart(tsa_df_stack).mark_line().encode(
+        x = alt.X('Date'),
+        y = alt.Y('data', title = 'Passenger volumes'),
+        color = 'year:N',
+        strokeWidth = alt.value(1)
+)
+
+# 添加交互式选择器
+selector = alt.selection_single(
+    on='mouseover',
+    nearest=True,
+    empty='none',
+    fields=['Date'],
+    init={'Date': '2022-01-01'}
+)
+
+# 创建一个点图层，用于显示选择器位置的信息
+points = line.mark_point().encode(
+    opacity=alt.condition(selector, alt.value(1), alt.value(0))
+).add_selection(selector)
+
+# 创建一个文本图层，用于显示选择器位置对应的y值
+text = line.mark_text(align='left', dx=5, dy=-5).encode(
+    text=alt.condition(selector, 'data:Q', alt.value(' '))
+)
+
+# 添加一条垂直线
+vline = alt.Chart(tsa_df_stack).mark_rule(color='red').encode(
+    x='Date',
+    size=alt.value(0.1)
+).transform_filter(
+    selector
+)
+
+# 将图表和交互式元素组合在一起
+chart = alt.layer(line, points, text, vline)
+
+# 显示图表
+chart.properties(
+    width=800, 
+    title='TSA checkpoint travel numbers'
+)
+
+df_2022 = pd.read_excel('US-Outbound-to-World-Regions_2022.xlsx')
+df_2022.columns = df_2022.iloc[2]
+df_2022_select = df_2022.iloc[3:10].set_index('Regions')
+df_2022_select.columns.name = None
+df_2022_select = df_2022_select.iloc[:, : 12]
+df_2022_final = df_2022_select.reset_index()
+df_2022_stack = df_2022_final.iloc[:, 1:12].stack().reset_index().set_index('level_0').join(df_2022_final).iloc[:, 0:3].rename(columns = {'level_1':'Month', 0:'Data'})
+bar_2022 = alt.Chart(df_2022_stack).mark_bar().encode(
+        x = alt.X('Month'),
+        y = alt.Y('Data'),
+        color = 'Regions:N',
+)
+bar_2022 = bar_2022.properties(title='2022 US citizens travel to international regions')
+
+df_2021 = pd.read_excel('US-Outbound-to-World-Regions_2021.xlsx')
+df_2021.columns = df_2021.iloc[2]
+df_2021_select = df_2021.iloc[3:10].set_index('Regions')
+df_2021_select.columns.name = None
+df_2021_select = df_2021_select.iloc[:, : 12]
+df_2021_final = df_2021_select.reset_index()
+df_2021_stack = df_2021_final.iloc[:, 1:12].stack().reset_index().set_index('level_0').join(df_2021_final).iloc[:, 0:3].rename(columns = {'level_1':'Month', 0:'Data'})
+# 创建一个选择器，用于捕获用户在2022年数据的月份柱状图上的鼠标悬停操作
+month_selector_2022 = alt.selection_single(fields=['Month'], empty='none', on='mouseover')
+
+# 创建一个选择器，用于捕获用户在2021年数据的月份柱状图上的鼠标悬停操作
+month_selector_2021 = alt.selection_single(fields=['Month'], empty='none', on='mouseover')
+
+# Create the bar chart for 2022 data
+bar_2022 = alt.Chart(df_2022_stack).mark_bar().encode(
+        x = alt.X('Month'),
+        y = alt.Y('Data'),
+        color = 'Regions:N',
+).properties(title='2022 US citizens travel to international regions', width=300).add_selection(
+    month_selector_2022
+)
+
+pie_2022 = alt.Chart(df_2022_stack).mark_arc(innerRadius=50, outerRadius=100).encode(
+    theta='sum(Data)',
+    color='Regions:N',
+    tooltip='Regions'
+).transform_filter(
+    month_selector_2022
+).properties(width=300)
+
+# Create the bar chart for 2021 data
+bar_2021 = alt.Chart(df_2021_stack).mark_bar().encode(
+        x = alt.X('Month'),
+        y = alt.Y('Data'),
+        color = 'Regions:N',
+).properties(title='2021 US citizens travel to international regions', width=300).add_selection(
+    month_selector_2021
+)
+
+pie_2021 = alt.Chart(df_2021_stack).mark_arc(innerRadius=50, outerRadius=100).encode(
+    theta='sum(Data)',
+    color='Regions:N',
+    tooltip='Regions'
+).transform_filter(
+    month_selector_2021
+).properties(width=300)
+
+# Combine the charts
+combined_charts = ((bar_2022 & pie_2022) | (bar_2021 & pie_2021)).resolve_scale(y='shared')
+
+# Display the combined charts
+combined_charts
+
+
+alt.data_transformers.disable_max_rows()
+destination_df = pd.read_csv('air-passengers-carried.csv')
+# 使用GeoPandas读取内置的世界地图数据
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+# 将地图数据与您的数据合并
+merged_data = world.set_index('iso_a3').join(destination_df.set_index('Code')).reset_index()
+
+# 创建选择器
+year_selector = alt.selection_single(
+    name='Select',
+    fields=['Year'],
+    init={'Year': 2018},
+    bind=alt.binding_range(min=2018, max=2020, step=1)
+)
+
+# 创建一个图表，根据所选年份显示地图
+choropleth = alt.Chart(merged_data).mark_geoshape().encode(
+    alt.Color('Air transport, passengers carried:Q', scale=alt.Scale(scheme='plasma', domain=[1e4, 1e8])),
+    tooltip=['Entity:N', 'Air transport, passengers carried:Q']
+).transform_filter(
+    year_selector
+).project('equirectangular').properties(
+    title='Air Transport Passengers Carried',
+    width=800,
+    height=400
+).add_selection(
+    year_selector
+)
+
+# 显示地图
+choropleth
+
 
 
 st.header('Hotel Booking')
