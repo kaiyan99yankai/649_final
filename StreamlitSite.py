@@ -58,11 +58,11 @@ chart = alt.layer(line, points, text, vline)
 
 # 显示图表
 chart.properties(
-    width=2000, 
+    width=800, 
     title='TSA checkpoint travel numbers'
 )
 
-# chart
+st.altair_chart(chart, use_container_width=False)
 
 df_2022 = pd.read_excel('US-Outbound-to-World-Regions_2022.xlsx')
 df_2022.columns = df_2022.iloc[2]
