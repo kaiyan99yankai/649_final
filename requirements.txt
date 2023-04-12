@@ -161,3 +161,4 @@ wsproto==1.2.0
 y-py==0.5.5
 ypy-websocket==0.8.2
 zipp==3.8.1
+geopandas==0.12.2
