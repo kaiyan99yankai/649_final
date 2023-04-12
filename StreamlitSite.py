@@ -134,6 +134,8 @@ combined_charts
 
 alt.data_transformers.disable_max_rows()
 destination_df = pd.read_csv('air-passengers-carried.csv')
+destination_df['Entity'] = destination_df['Entity'].astype(str)
+destination_df['Code'] = destination_df['Code'].astype(str)
 # 使用GeoPandas读取内置的世界地图数据
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
