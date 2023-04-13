@@ -145,8 +145,14 @@ destination_df['Code'] = destination_df['Code'].astype(str)
 # Load world data from GeoPandas
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
+# Add a slider to select the year
+selected_year = st.slider("Select Year", min_value=2018, max_value=2020, value=2018, step=1)
+
+# Filter the data based on the selected year
+destination_df_year = destination_df[destination_df['Year'] == selected_year]
+
 # Merge the data
-merged_data = world.set_index('iso_a3').join(destination_df.set_index('Code')).reset_index()
+merged_data = world.set_index('iso_a3').join(destination_df_year.set_index('Code')).reset_index()
 
 # Convert the merged data to a GeoJSON object
 merged_data_geojson = json.loads(merged_data.to_json())
