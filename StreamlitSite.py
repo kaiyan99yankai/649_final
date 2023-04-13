@@ -4,6 +4,7 @@ import numpy as np
 import altair as alt
 from vega_datasets import data
 import geopandas as gpd
+import json
 
 st.title('SI649 Covid Traveling Dashboard')
 
@@ -134,20 +135,20 @@ combined_charts
 
 alt.data_transformers.disable_max_rows()
 
+# Load data
 destination_df = pd.read_csv('air-passengers-carried.csv')
 destination_df['Entity'] = destination_df['Entity'].astype(str)
 destination_df['Code'] = destination_df['Code'].astype(str)
 
-# Read the built-in world map data
+# Load world data from GeoPandas
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
-# Convert the 'geometry' column to WKT format
-world = world.to_crs("EPSG:4326")
-
-# Merge the map data with your data
+# Merge the data
 merged_data = world.set_index('iso_a3').join(destination_df.set_index('Code')).reset_index()
 
-# Create a selector
+# Convert the merged data to a GeoJSON object
+merged_data_geojson = json.loads(merged_data.to_json())
+
 year_selector = alt.selection_single(
     name='Select',
     fields=['Year'],
@@ -155,10 +156,12 @@ year_selector = alt.selection_single(
     bind=alt.binding_range(min=2018, max=2020, step=1)
 )
 
-# Create a chart that displays the map based on the selected year
-choropleth = alt.Chart(merged_data).mark_geoshape().encode(
-    alt.Color('Air transport, passengers carried:Q', scale=alt.Scale(scheme='plasma', domain=[1e4, 1e8])),
-    tooltip=['Entity:N', 'Air transport, passengers carried:Q']
+choropleth = alt.Chart(alt.Data(values=merged_data_geojson['features'], format=alt.DataFormat(type='json'))).mark_geoshape().encode(
+    alt.Color('properties.Air transport, passengers carried:Q',
+              scale=alt.Scale(scheme='plasma', domain=[1e4, 1e8])),
+    tooltip=['properties.Entity:N', 'properties.Air transport, passengers carried:Q']
+).transform_calculate(
+    Year='datum.properties.Year'
 ).transform_filter(
     year_selector
 ).project('equirectangular').properties(
@@ -169,9 +172,7 @@ choropleth = alt.Chart(merged_data).mark_geoshape().encode(
     year_selector
 )
 
-# Display the map
 choropleth
-
 
 
 st.header('Hotel Booking')
