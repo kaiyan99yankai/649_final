@@ -5,6 +5,8 @@ import altair as alt
 from vega_datasets import data
 import geopandas as gpd
 import json
+import folium
+from streamlit_folium import folium_static
 
 st.title('SI649 Covid Traveling Dashboard')
 
@@ -149,30 +151,38 @@ merged_data = world.set_index('iso_a3').join(destination_df.set_index('Code')).r
 # Convert the merged data to a GeoJSON object
 merged_data_geojson = json.loads(merged_data.to_json())
 
-year_selector = alt.selection_single(
-    name='Select',
-    fields=['Year'],
-    init={'Year': 2018},
-    bind=alt.binding_range(min=2018, max=2020, step=1)
-)
+# Create a folium map
+m = folium.Map(location=[0, 0], zoom_start=2)
 
-choropleth = alt.Chart(alt.Data(values=merged_data_geojson['features'], format=alt.DataFormat(type='json'))).mark_geoshape().encode(
-    alt.Color('properties.Air transport, passengers carried:Q',
-              scale=alt.Scale(scheme='plasma', domain=[1e4, 1e8])),
-    tooltip=['properties.Entity:N', 'properties.Air transport, passengers carried:Q']
-).transform_calculate(
-    Year='datum.properties.Year'
-).transform_filter(
-    year_selector
-).project('equirectangular').properties(
-    title='Air Transport Passengers Carried',
-    width=800,
-    height=400
-).add_selection(
-    year_selector
-)
+# Define a function to determine the color based on the number of passengers carried
+def get_color(feature):
+    passengers = feature['properties']['Air transport, passengers carried']
+    if passengers is None:
+        return '#FFFFFF'
+    elif passengers < 1e4:
+        return '#fee0b6'
+    elif passengers < 1e5:
+        return '#f1a340'
+    elif passengers < 1e6:
+        return '#d73027'
+    else:
+        return '#a50026'
 
-choropleth
+# Add the choropleth layer to the folium map
+folium.GeoJson(
+    merged_data_geojson,
+    style_function=lambda feature: {
+        'fillColor': get_color(feature),
+        'color': 'black',
+        'weight': 1,
+        'fillOpacity': 0.7,
+    },
+    tooltip=folium.features.GeoJsonTooltip(fields=['Entity', 'Air transport, passengers carried'],
+                                           aliases=['Country', 'Passengers Carried'])
+).add_to(m)
+
+# Display the folium map in Streamlit
+folium_static(m)
 
 
 st.header('Hotel Booking')
