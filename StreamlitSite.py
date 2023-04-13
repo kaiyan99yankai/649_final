@@ -133,16 +133,21 @@ combined_charts
 
 
 alt.data_transformers.disable_max_rows()
+
 destination_df = pd.read_csv('air-passengers-carried.csv')
 destination_df['Entity'] = destination_df['Entity'].astype(str)
 destination_df['Code'] = destination_df['Code'].astype(str)
-# 使用GeoPandas读取内置的世界地图数据
+
+# Read the built-in world map data
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
-# 将地图数据与您的数据合并
+# Convert the 'geometry' column to WKT format
+world = world.to_crs("EPSG:4326")
+
+# Merge the map data with your data
 merged_data = world.set_index('iso_a3').join(destination_df.set_index('Code')).reset_index()
 
-# 创建选择器
+# Create a selector
 year_selector = alt.selection_single(
     name='Select',
     fields=['Year'],
@@ -150,7 +155,7 @@ year_selector = alt.selection_single(
     bind=alt.binding_range(min=2018, max=2020, step=1)
 )
 
-# 创建一个图表，根据所选年份显示地图
+# Create a chart that displays the map based on the selected year
 choropleth = alt.Chart(merged_data).mark_geoshape().encode(
     alt.Color('Air transport, passengers carried:Q', scale=alt.Scale(scheme='plasma', domain=[1e4, 1e8])),
     tooltip=['Entity:N', 'Air transport, passengers carried:Q']
@@ -164,7 +169,7 @@ choropleth = alt.Chart(merged_data).mark_geoshape().encode(
     year_selector
 )
 
-# 显示地图
+# Display the map
 choropleth
 
 
