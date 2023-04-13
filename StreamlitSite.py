@@ -170,7 +170,7 @@ choropleth = alt.Chart(merged_data).mark_geoshape().encode(
 )
 
 # Display the map
-choropleth
+# choropleth
 
 
 
